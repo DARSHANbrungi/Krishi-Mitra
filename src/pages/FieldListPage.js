@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Container, Grid, Typography, Card, CardContent, CircularProgress, CardActionArea, CardMedia, Chip } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { useAuth } from '../App';
+import { useApp } from '../App';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format } from 'date-fns';
@@ -17,7 +17,7 @@ const cropImages = {
 };
 
 const FieldListPage = () => {
-    const { user } = useAuth();
+    const { user } = useApp();
     const navigate = useNavigate();
     const [fields, setFields] = useState([]);
     const [loading, setLoading] = useState(true);

@@ -4,13 +4,13 @@ import { Box, Button, Container, TextField, Typography, Paper } from '@mui/mater
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useAuth } from '../App';
+import { useApp } from '../App';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 
 const CreateFieldPage = () => {
-    const { user } = useAuth();
+    const { user } = useApp();
     const navigate = useNavigate();
     const [fieldName, setFieldName] = useState('');
     const [cropType, setCropType] = useState('');

@@ -16,7 +16,7 @@ import EventIcon from '@mui/icons-material/Event';
 
 import { doc, getDoc, collection, addDoc, query, where, orderBy, onSnapshot, runTransaction, serverTimestamp, limit } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../App';
+import { useApp } from '../App';
 import { format } from 'date-fns';
 
 // A reusable Stat Card component
@@ -50,7 +50,7 @@ const pieChartColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '
 const FieldDetailPage = () => {
     const { fieldId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user } = useApp();
     const [field, setField] = useState(null);
     const [loading, setLoading] = useState(true);
     const [tabValue, setTabValue] = useState(0);
