@@ -3,13 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea, Area } from 'recharts';
-import { Typography, Paper } from '@mui/material';
+import { Typography, Paper, useTheme } from '@mui/material';
 
-// NEW: Custom Tooltip for a nicer design
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <Paper elevation={3} sx={{ padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}>
+      <Paper elevation={3} sx={{ padding: '10px' }}>
         <Typography variant="body2">{`Time: ${label}`}</Typography>
         <Typography variant="body1" sx={{ color: '#8884d8', fontWeight: 'bold' }}>{`Moisture: ${payload[0].value}%`}</Typography>
       </Paper>
@@ -18,12 +17,10 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-
 const MoistureChart = ({ fieldId }) => { 
+  const theme = useTheme();
   const [data, setData] = useState([]);
   const GLOBAL_TEST_FIELD_ID = "global-test-field-01";
-
-  // For now, we'll hardcode the ideal range. Later, this can come from the field's crop type.
   const idealMoistureRange = { min: 40, max: 70 };
 
   useEffect(() => {
@@ -47,47 +44,40 @@ const MoistureChart = ({ fieldId }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [fieldId]);
 
   if (data.length === 0) {
-    return <Typography>Waiting for global sensor data...</Typography>;
+    return <Typography>Waiting for sensor data for this field...</Typography>;
   }
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <LineChart
-        data={data}
-        margin={{ top: 5, right: 30, left: 20, bottom: 20 }} // Increased bottom margin for label
-      >
-        {/* NEW: SVG Gradient definition for the line and area colors */}
+      <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
         <defs>
           <linearGradient id="colorMoisture" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#2e7d32" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#ff8f00" stopOpacity={0.8}/>
+            <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.8}/>
+            <stop offset="95%" stopColor={theme.palette.secondary.main} stopOpacity={0.8}/>
           </linearGradient>
         </defs>
 
-        <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-        <XAxis dataKey="time" />
-        <YAxis domain={[0, 100]} label={{ value: 'Moisture (%)', angle: -90, position: 'insideLeft' }} />
-        
-        {/* UPDATED: Using the new custom tooltip */}
+        <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+        <XAxis dataKey="time" stroke={theme.palette.text.secondary} tick={{ fill: theme.palette.text.secondary }} />
+        <YAxis 
+          domain={[0, 100]} 
+          label={{ value: 'Moisture (%)', angle: -90, position: 'insideLeft', fill: theme.palette.text.secondary }} 
+          stroke={theme.palette.text.secondary}
+          tick={{ fill: theme.palette.text.secondary }}
+        />
         <Tooltip content={<CustomTooltip />} />
-
-        {/* NEW: Reference area to show the ideal moisture range */}
         <ReferenceArea 
           y1={idealMoistureRange.min} 
           y2={idealMoistureRange.max} 
           strokeOpacity={0.3} 
-          fill="#4caf50" // Light green fill
+          fill={theme.palette.primary.main}
           fillOpacity={0.1}
-          label={{ value: "Ideal Range", position: "insideTopLeft", fill: "#4caf50", fontSize: 12 }}
+          label={{ value: "Ideal Range", position: "insideTopLeft", fill: theme.palette.text.primary, fontSize: 12 }}
         />
-        
-        {/* NEW: Area under the line using the gradient */}
         <Area type="monotone" dataKey="value" stroke="none" fill="url(#colorMoisture)" fillOpacity={0.3} />
-
-        {/* UPDATED: Line now uses the gradient color */}
         <Line 
           type="monotone" 
           dataKey="value" 

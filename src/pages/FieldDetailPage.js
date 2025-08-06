@@ -1,11 +1,12 @@
 // src/pages/FieldDetailPage.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Grid, Paper, Typography, Box, Button, CircularProgress, Divider, Breadcrumbs, Link, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Grid, Paper, Typography, Box, Button, CircularProgress, Divider, Breadcrumbs, Link, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs, Tab, Select, MenuItem, FormControl, InputLabel, useTheme, DialogContentText, } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, Sector } from 'recharts';
 import MoistureChart from '../components/MoistureChart';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 import OpacityIcon from '@mui/icons-material/Opacity';
@@ -19,51 +20,74 @@ import { db } from '../firebase';
 import { useApp } from '../App';
 import { format } from 'date-fns';
 
-// A reusable Stat Card component
-const StatCard = ({ title, value, icon, iconColor = 'primary' }) => (
-    <Paper
-        elevation={2}
-        sx={{
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            borderRadius: '16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            backdropFilter: 'blur(10px)',
-            transition: '0.3s',
-            '&:hover': { boxShadow: 6 },
-        }}
-    >
-        {React.cloneElement(icon, { color: iconColor, sx:{ fontSize: 40 } })}
-        <Box ml={2}>
-            <Typography variant="h6" color="text.primary">{value}</Typography>
-            <Typography variant="body2" color="text.secondary">{title}</Typography>
-        </Box>
-    </Paper>
-);
+const StatCard = ({ title, value, icon, iconColor = 'primary' }) => {
+    const theme = useTheme();
+    return (
+        <Paper
+            elevation={2}
+            sx={{
+                p: 2,
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '16px',
+                height: '100%',
+                backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(255, 255, 255, 0.7)',
+                transition: '0.3s',
+                '&:hover': { boxShadow: 6 },
+            }}
+        >
+            {React.cloneElement(icon, { color: iconColor, sx:{ fontSize: 40 } })}
+            <Box ml={2}>
+                <Typography variant="h6" color="text.primary">{value}</Typography>
+                <Typography variant="body2" color="text.secondary">{title}</Typography>
+            </Box>
+        </Paper>
+    );
+};
 
-// Predefined categories for expenses
 const expenseCategories = ['Seeds', 'Fertilizer', 'Pesticides', 'Labor', 'Irrigation', 'Machinery', 'Other'];
-// Colors for the Pie Chart
 const pieChartColors = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF1943', '#19A2FF'];
 
+const renderActiveShape = (props) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, theme } = props;
+    return (
+      <g>
+        <text x={cx} y={cy - 10} dy={8} textAnchor="middle" fill={theme.palette.text.primary} fontSize="1.2rem" fontWeight="bold">
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+        <text x={cx} y={cy + 10} dy={8} textAnchor="middle" fill={theme.palette.text.secondary} fontSize="0.9rem">
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+      </g>
+    );
+  };
+
 const FieldDetailPage = () => {
+    const { t } = useTranslation(); 
     const { fieldId } = useParams();
     const navigate = useNavigate();
     const { user } = useApp();
+    const theme = useTheme();
     const [field, setField] = useState(null);
     const [loading, setLoading] = useState(true);
     const [tabValue, setTabValue] = useState(0);
-
-    // Expense state
     const [expenses, setExpenses] = useState([]);
     const [openExpenseDialog, setOpenExpenseDialog] = useState(false);
     const [expenseDesc, setExpenseDesc] = useState('');
     const [expenseAmount, setExpenseAmount] = useState('');
     const [expenseDate, setExpenseDate] = useState(new Date());
     const [expenseCategory, setExpenseCategory] = useState('');
-
     const [latestMoisture, setLatestMoisture] = useState(null);
+    const [activeIndex, setActiveIndex] = useState(null);
 
     useEffect(() => {
         const fetchFieldData = async () => { if (user && fieldId) { const fieldRef = doc(db, 'users', user.uid, 'fields', fieldId); const docSnap = await getDoc(fieldRef); if (docSnap.exists()) { setField(docSnap.data()); } else { console.error("No such field found!"); } setLoading(false); }};
@@ -87,36 +111,22 @@ const FieldDetailPage = () => {
     }, [fieldId]);
 
     const handleOpenExpenseDialog = () => {
-        setExpenseDesc('');
-        setExpenseAmount('');
-        setExpenseDate(new Date());
-        setExpenseCategory('');
-        setOpenExpenseDialog(true);
+        setExpenseDesc(''); setExpenseAmount(''); setExpenseDate(new Date()); setExpenseCategory(''); setOpenExpenseDialog(true);
     };
 
     const handleAddExpense = async () => {
         if (!expenseCategory || !expenseAmount) return alert('Please fill in a category and amount.');
         const amount = parseFloat(expenseAmount);
         if (isNaN(amount) || amount <= 0) return alert('Please enter a valid amount.');
-
         const fieldRef = doc(db, 'users', user.uid, 'fields', fieldId);
         const expenseCollectionRef = collection(db, `users/${user.uid}/fields/${fieldId}/expenses`);
-
         try {
             await runTransaction(db, async (transaction) => {
                 const fieldDoc = await transaction.get(fieldRef);
                 if (!fieldDoc.exists()) throw "Field document does not exist!";
-                
                 const newTotalExpense = (fieldDoc.data().totalExpense || 0) + amount;
                 transaction.update(fieldRef, { totalExpense: newTotalExpense });
-                
-                transaction.set(doc(expenseCollectionRef), {
-                    description: expenseDesc,
-                    amount: amount,
-                    date: expenseDate,
-                    category: expenseCategory,
-                    createdAt: serverTimestamp(),
-                });
+                transaction.set(doc(expenseCollectionRef), { description: expenseDesc, amount: amount, date: expenseDate, category: expenseCategory, createdAt: serverTimestamp() });
             });
             setOpenExpenseDialog(false);
         } catch (e) { console.error("Transaction failed: ", e); alert("Failed to add expense."); }
@@ -133,45 +143,42 @@ const FieldDetailPage = () => {
     };
     const expenseChartData = getExpenseChartData();
 
+    const onPieEnter = (_, index) => { setActiveIndex(index); };
+    const onPieMouseLeave = () => { setActiveIndex(null); };
+
     if (loading) { return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Box>; }
+
+    const panelStyle = { p: { xs: 2, md: 3 }, borderRadius: '16px', height: '100%', backgroundColor: theme.palette.mode === 'dark' ? 'background.paper' : 'rgba(255, 255, 255, 0.7)', boxShadow: 3 };
 
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Box>
                 <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-                    <Link component="button" sx={{textDecoration:'none'}}  color="inherit" onClick={() => navigate('/app/my-fields')}>My Fields</Link>
+                    <Link component="button" sx={{textDecoration:'none'}}  color="inherit" onClick={() => navigate('/app/my-fields')}>{t('myFields')}</Link>
                     <Typography color="text.primary">{field?.fieldName}</Typography>
                 </Breadcrumbs>
                 
-                <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>{field?.fieldName} Dashboard</Typography>
+                <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>{field?.fieldName} {t('fieldDashboard')}</Typography>
                 
                 <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard title="Total Expenses" value={`₹${field?.totalExpense?.toLocaleString('en-IN') || 0}`} icon={<MonetizationOnIcon />} iconColor="success" />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard title="Current Moisture" value={latestMoisture !== 'N/A' ? `${latestMoisture}%` : 'N/A'} icon={<OpacityIcon />} iconColor="info" />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard title="Field Area" value={`${field?.acreage || 0} acres`} icon={<SquareFootIcon />} iconColor="warning" />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <StatCard title="Sowing Date" value={field?.sowingDate ? format(field.sowingDate.toDate(), 'do MMM yyyy') : 'N/A'} icon={<EventIcon />} iconColor="primary" />
-                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}><StatCard title={t('totalExpenses')} value={`₹${field?.totalExpense?.toLocaleString('en-IN') || 0}`} icon={<MonetizationOnIcon />} iconColor="success" /></Grid>
+                    <Grid item xs={12} sm={6} md={3}><StatCard title="Current Moisture" value={latestMoisture !== 'N/A' ? `${latestMoisture}%` : 'N/A'} icon={<OpacityIcon />} iconColor="info" /></Grid>
+                    <Grid item xs={12} sm={6} md={3}><StatCard title={t('area')} value={`${field?.acreage || 0} ${t('acres')}`} icon={<SquareFootIcon />} iconColor="warning" /></Grid>
+                    <Grid item xs={12} sm={6} md={3}><StatCard title={t('sowingDateLabel')} value={field?.sowingDate ? format(field.sowingDate.toDate(), 'do MMM yyyy') : 'N/A'} icon={<EventIcon />} iconColor="primary" /></Grid>
                 </Grid>
                 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                     <Tabs value={tabValue} onChange={(event, newValue) => setTabValue(newValue)} aria-label="dashboard tabs">
-                        <Tab label="Overview" />
-                        <Tab label="Financials" />
+                        <Tab label={t('overview')} />
+                        <Tab label={t('financials')} />
                     </Tabs>
                 </Box>
 
                 {tabValue === 0 && (
-                    <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: '16px', backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', boxShadow: 3 }}>
+                    <Paper sx={panelStyle}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <OpacityIcon sx={{ color: 'primary.main', mr: 1.5 }} />
-                            <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>Real-time Soil Moisture</Typography>
+                            <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>{t('soilMoisture')}</Typography>
                         </Box>
                         <Divider sx={{ mb: 3 }} />
                         <MoistureChart fieldId={fieldId} />
@@ -181,41 +188,56 @@ const FieldDetailPage = () => {
                 {tabValue === 1 && (
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={5}>
-                             <Paper sx={{ p: 2, borderRadius: '16px', height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', boxShadow: 3 }}>
-                                <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', mb: 2, textAlign: 'center' }}>Expense Breakdown</Typography>
-                                <ResponsiveContainer width="100%" height={300}>
+                             <Paper sx={{...panelStyle, p: 2}}>
+                                <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', mb: 2, textAlign: 'center' }}>{t('expenseBreakdown')}</Typography>
+                                <ResponsiveContainer width="100%" height={350}>
                                     {expenseChartData.length > 0 ? (
                                         <PieChart>
-                                            <Pie data={expenseChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
+                                            <RechartsTooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
+                                            <Legend iconSize={12} wrapperStyle={{ color: theme.palette.text.primary, fontSize: '0.9rem' }} />
+                                            <Pie 
+                                                activeIndex={activeIndex}
+                                                activeShape={(props) => renderActiveShape({ ...props, theme })}
+                                                data={expenseChartData} 
+                                                dataKey="value" nameKey="name" cx="50%" cy="50%" 
+                                                innerRadius={70} outerRadius={100} fill="#8884d8" paddingAngle={3}
+                                                onMouseEnter={onPieEnter} onMouseLeave={onPieMouseLeave}
+                                            >
                                                 {expenseChartData.map((entry, index) => (
                                                     <Cell key={`cell-${index}`} fill={pieChartColors[index % pieChartColors.length]} />
                                                 ))}
                                             </Pie>
-                                            <RechartsTooltip formatter={(value) => `₹${value.toLocaleString('en-IN')}`} />
-                                            <Legend />
+                                            {activeIndex === null && (
+                                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fill={theme.palette.text.secondary}>
+                                                    <tspan x="50%" dy="-0.6em" fontSize="0.9em">{t('total')}</tspan>
+                                                    <tspan x="50%" dy="1.2em" fontSize="1.4em" fontWeight="bold" fill={theme.palette.text.primary}>
+                                                        ₹{field?.totalExpense?.toLocaleString('en-IN') || 0}
+                                                    </tspan>
+                                                </text>
+                                            )}
                                         </PieChart>
                                     ) : (
                                         <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>
-                                            <Typography color="text.secondary">No expense data for chart.</Typography>
+                                            <Typography color="text.secondary">{t('noExpenseData')}</Typography>
                                         </Box>
                                     )}
                                 </ResponsiveContainer>
                              </Paper>
                         </Grid>
                         <Grid item xs={12} md={7}>
-                            <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: '16px', height: '100%', backgroundColor: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(10px)', boxShadow: 3 }}>
+                            <Paper sx={panelStyle}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>Expense Log</Typography>
-                                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenExpenseDialog}>Add Expense</Button>
+                                    <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>{t('expenseLog')}</Typography>
+                                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenExpenseDialog}>{t('addExpense')}</Button>
                                 </Box>
-                                <TableContainer sx={{ mt: 2, maxHeight: 260 }}>
+                                <TableContainer sx={{ mt: 2, maxHeight: 310 }}>
                                     <Table stickyHeader>
                                         <TableHead>
                                             <TableRow>
-                                                <TableCell sx={{backgroundColor: 'transparent'}}>Date</TableCell>
-                                                <TableCell sx={{backgroundColor: 'transparent'}}>Category</TableCell>
-                                                <TableCell sx={{backgroundColor: 'transparent'}}>Description</TableCell>
-                                                <TableCell sx={{backgroundColor: 'transparent'}} align="right">Amount</TableCell>
+                                                <TableCell sx={{backgroundColor: 'background.paper'}}>{t('date')}</TableCell>
+                                                <TableCell sx={{backgroundColor: 'background.paper'}}>{t('category')}</TableCell>
+                                                <TableCell sx={{backgroundColor: 'background.paper'}}>{t('description')}</TableCell>
+                                                <TableCell sx={{backgroundColor: 'background.paper'}} align="right">{t('amount')}</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
@@ -236,22 +258,22 @@ const FieldDetailPage = () => {
                 )}
 
                 <Dialog open={openExpenseDialog} onClose={() => setOpenExpenseDialog(false)}>
-                    <DialogTitle>Add New Expense</DialogTitle>
+                    <DialogTitle>{t('addNewExpense')}</DialogTitle>
                     <DialogContent>
-                        <DialogContentText>Log a new expense for {field?.fieldName}.</DialogContentText>
+                        <DialogContentText>{t('logNewExpenseFor', { fieldName: field?.fieldName })}.</DialogContentText>
                         <FormControl variant="standard" fullWidth sx={{ mt: 2 }} required>
-                            <InputLabel>Category</InputLabel>
-                            <Select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} label="Category">
+                            <InputLabel>{t('category')}</InputLabel>
+                            <Select value={expenseCategory} onChange={(e) => setExpenseCategory(e.target.value)} label={t('category')}>
                                 {expenseCategories.map(cat => <MenuItem key={cat} value={cat}>{cat}</MenuItem>)}
                             </Select>
                         </FormControl>
-                        <TextField margin="dense" label="Description (optional)" type="text" fullWidth variant="standard" value={expenseDesc} onChange={(e) => setExpenseDesc(e.target.value)} />
-                        <TextField margin="dense" label="Amount (₹)" type="number" fullWidth variant="standard" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} required/>
-                        <DatePicker label="Expense Date" value={expenseDate} onChange={(date) => setExpenseDate(date)} sx={{ width: '100%', mt: 3 }}/>
+                        <TextField margin="dense" label={`${t('description')} (optional)`} type="text" fullWidth variant="standard" value={expenseDesc} onChange={(e) => setExpenseDesc(e.target.value)} />
+                        <TextField margin="dense" label={`${t('amount')} (₹)`} type="number" fullWidth variant="standard" value={expenseAmount} onChange={(e) => setExpenseAmount(e.target.value)} required/>
+                        <DatePicker label={t('date')} value={expenseDate} onChange={(date) => setExpenseDate(date)} sx={{ width: '100%', mt: 3 }}/>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenExpenseDialog(false)}>Cancel</Button>
-                        <Button onClick={handleAddExpense} variant="contained">Save Expense</Button>
+                        <Button onClick={() => setOpenExpenseDialog(false)}>{t('cancel')}</Button>
+                        <Button onClick={handleAddExpense} variant="contained">{t('saveExpense')}</Button>
                     </DialogActions>
                 </Dialog>
             </Box>

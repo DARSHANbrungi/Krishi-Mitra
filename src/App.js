@@ -15,6 +15,7 @@ import FieldListPage from './pages/FieldListPage';
 import FieldDetailPage from './pages/FieldDetailPage';
 import WeatherPage from './pages/WeatherPage';
 import CropRecommenderPage from './pages/CropRecommenderPage';
+import ProfilePage from './pages/ProfilePage';
 
 const AppContext = createContext();
 export const useApp = () => useContext(AppContext);
@@ -41,28 +42,15 @@ function App() {
           mode,
           ...(mode === 'light'
             ? {
-                // Light Mode Palette (Unchanged)
                 primary: { main: '#2e7d32' },
                 secondary: { main: '#ff8f00' },
-                background: {
-                    default: '#f4f6f8',
-                    paper: '#ffffff',
-                    farm: '#f1f8e9'
-                },
+                background: { default: '#f4f6f8', paper: '#ffffff', farm: '#f1f8e9' },
               }
             : {
-                // --- UPDATED: Professional Dark Mode Palette ---
                 primary: { main: '#66bb6a' },
                 secondary: { main: '#ffa726' },
-                background: {
-                    default: '#1C2531', // Deep, dark blue-slate
-                    paper: '#253241',   // A slightly lighter slate for elevated surfaces
-                    farm: '#1C2531'    // Use the default dark for the main bg
-                },
-                text: {
-                    primary: '#E0E0E0',
-                    secondary: '#A0A0A0',
-                },
+                background: { default: '#1C2531', paper: '#253241', farm: '#1C2531' },
+                text: { primary: '#E0E0E0', secondary: '#A0A0A0' },
               }),
         },
         typography: {
@@ -86,7 +74,17 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  const handleGetStarted = () => setShowAuthPage(true);
+  // --- NEW: Effect to reset theme on logout ---
+  useEffect(() => {
+    if (!user) {
+      // If user is null (logged out), reset the theme to light mode
+      setMode('light');
+    }
+  }, [user]); // This effect runs whenever the user state changes
+
+  const handleGetStarted = () => {
+    setShowAuthPage(true);
+  };
 
   if (loading) {
     return <Typography sx={{ textAlign: 'center', mt: '20%' }} variant="h5">Loading KrishiMitra...</Typography>;
@@ -106,6 +104,7 @@ function App() {
             <Route path="create-field" element={<CreateFieldPage />} />
             <Route path="weather" element={<WeatherPage />} />
             <Route path="recommend" element={<CropRecommenderPage />} />
+            <Route path="profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to={user ? "/app" : "/"} />} />
         </Routes>

@@ -8,15 +8,19 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format } from 'date-fns';
 import LandscapeIcon from '@mui/icons-material/Landscape';
+import { useTranslation } from 'react-i18next';
 
+// This object can be expanded with more crop types
 const cropImages = {
     pomegranate: 'https://images.pexels.com/photos/2294477/pexels-photo-2294477.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
     wheat: 'https://images.pexels.com/photos/1753456/pexels-photo-1753456.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
     rice: 'https://images.pexels.com/photos/2346083/pexels-photo-2346083.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
+    ragi: 'https://images.pexels.com/photos/7319106/pexels-photo-7319106.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
     default: 'https://images.pexels.com/photos/2132126/pexels-photo-2132126.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
 };
 
 const FieldListPage = () => {
+    const { t } = useTranslation();
     const { user } = useApp();
     const navigate = useNavigate();
     const [fields, setFields] = useState([]);
@@ -42,9 +46,9 @@ const FieldListPage = () => {
         return (
             <Box textAlign="center" mt={5}>
                 <LandscapeIcon sx={{ fontSize: 80, color: 'text.secondary' }} />
-                <Typography variant="h5" color="text.secondary" gutterBottom>Your farm is empty</Typography>
-                <Typography>Click "Add New Field" to get started and monitor your crops.</Typography>
-                <Button onClick={() => navigate('/app/create-field')} variant="contained" sx={{ mt: 3 }}>Add Your First Field</Button>
+                <Typography variant="h5" color="text.secondary" gutterBottom>{t('yourFarmIsEmpty')}</Typography>
+                <Typography>{t('clickAddNewField')}</Typography>
+                <Button onClick={() => navigate('/app/create-field')} variant="contained" sx={{ mt: 3 }}>{t('addYourFirstField')}</Button>
             </Box>
         )
     }
@@ -52,8 +56,8 @@ const FieldListPage = () => {
     return (
         <Container maxWidth="lg" sx={{ pl: '0 !important', pr: '0 !important' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>My Fields</Typography>
-                <Button onClick={() => navigate('/app/create-field')} variant="contained" startIcon={<AddIcon />}>Add New Field</Button>
+                <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>{t('myFields')}</Typography>
+                <Button onClick={() => navigate('/app/create-field')} variant="contained" startIcon={<AddIcon />}>{t('addNewField')}</Button>
             </Box>
             <Grid container spacing={3}>
                 {fields.map((field) => {
@@ -67,15 +71,15 @@ const FieldListPage = () => {
                                     <CardContent>
                                         <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>{field.fieldName}</Typography>
                                         <Chip label={field.cropType} color="primary" sx={{ mb: 2, fontWeight: 'bold' }} />
-                                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Box component="span" fontWeight="bold" mr={1}>Area:</Box> {field.acreage} acres
+                                        <Typography variant="body2" color="text.secondary">
+                                            <Box component="span" fontWeight="bold">{t('area')}:</Box> {field.acreage} {t('acres')}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Box component="span" fontWeight="bold" mr={1}>Sown on:</Box> 
+                                        <Typography variant="body2" color="text.secondary">
+                                            <Box component="span" fontWeight="bold">{t('sownOn')}:</Box> 
                                             {field.sowingDate ? format(field.sowingDate.toDate(), 'do MMMM yyyy') : 'N/A'}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                                            <Box component="span" fontWeight="bold" mr={1}>Total Expenses:</Box> 
+                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                            <Box component="span" fontWeight="bold">{t('totalExpenses')}:</Box> 
                                             ₹{field.totalExpense?.toLocaleString('en-IN') || 0}
                                         </Typography>
                                     </CardContent>

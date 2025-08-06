@@ -4,6 +4,7 @@ import { Box, Typography, Grid, Paper, CircularProgress, Alert, Tooltip } from '
 import axios from 'axios';
 import { format, isSameDay } from 'date-fns';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
@@ -11,7 +12,6 @@ import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import GrainIcon from '@mui/icons-material/Grain';
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import ThunderstormIcon from '@mui/icons-material/Thunderstorm';
-import MyLocationIcon from '@mui/icons-material/MyLocation';
 import AirIcon from '@mui/icons-material/Air';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import CompressIcon from '@mui/icons-material/Compress';
@@ -19,7 +19,6 @@ import WbTwilightIcon from '@mui/icons-material/WbTwilight';
 import WbSunnyOutlinedIcon from '@mui/icons-material/WbSunnyOutlined';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 
-// A professional icon mapping using MUI icons with colors
 const getWeatherIcon = (iconCode, theme) => {
     const iconStyle = { fontSize: { xs: 80, md: 100 }, mb: 1 };
     switch (iconCode.slice(0, 2)) {
@@ -77,12 +76,13 @@ const processForecastData = (list) => {
 };
 
 const WeatherPage = () => {
+    const { t } = useTranslation();
     const theme = useTheme();
     const [currentWeather, setCurrentWeather] = useState(null);
     const [dailyForecast, setDailyForecast] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [locationName, setLocationName] = useState('your location');
+    const [locationName, setLocationName] = useState('');
 
     useEffect(() => {
         const fetchWeatherData = async (lat, lon) => {
@@ -125,7 +125,7 @@ const WeatherPage = () => {
 
     return (
         <Box>
-            <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>Weather Forecast - {locationName}</Typography>
+            <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>{t('weatherForecast')} - {locationName}</Typography>
             
             <Paper elevation={4} sx={{ p: { xs: 2, md: 4 }, mb: 4, borderRadius: '20px' }}>
                 <Grid container spacing={4}>
@@ -139,25 +139,25 @@ const WeatherPage = () => {
                     
                     <Grid item xs={12} md={7}>
                         <Grid container spacing={3} alignItems="center">
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<ThermostatIcon color="action" />} label="Feels Like" value={`${Math.round(currentWeather.main.feels_like)}°C`} /></Grid>
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WaterDropIcon color="info" />} label="Humidity" value={`${currentWeather.main.humidity}%`} /></Grid>
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<AirIcon color="action" />} label="Wind Speed" value={`${currentWeather.wind.speed} m/s`} /></Grid>
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<CompressIcon color="action" />} label="Pressure" value={`${currentWeather.main.pressure} hPa`} /></Grid>
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WbSunnyOutlinedIcon color="warning" />} label="Sunrise" value={format(new Date(currentWeather.sys.sunrise * 1000), 'p')} /></Grid>
-                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WbTwilightIcon color="secondary" />} label="Sunset" value={format(new Date(currentWeather.sys.sunset * 1000), 'p')} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<ThermostatIcon color="action" />} label={t('feelsLike')} value={`${Math.round(currentWeather.main.feels_like)}°C`} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WaterDropIcon color="info" />} label={t('humidity')} value={`${currentWeather.main.humidity}%`} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<AirIcon color="action" />} label={t('windSpeed')} value={`${currentWeather.wind.speed} m/s`} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<CompressIcon color="action" />} label={t('pressure')} value={`${currentWeather.main.pressure} hPa`} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WbSunnyOutlinedIcon color="warning" />} label={t('sunrise')} value={format(new Date(currentWeather.sys.sunrise * 1000), 'p')} /></Grid>
+                            <Grid item xs={6} sm={4}><WeatherDetail icon={<WbTwilightIcon color="secondary" />} label={t('sunset')} value={format(new Date(currentWeather.sys.sunset * 1000), 'p')} /></Grid>
                         </Grid>
                     </Grid>
                 </Grid>
             </Paper>
 
-            <Typography variant="h5" sx={{mb: 2, fontWeight: '500'}}>5-Day Forecast</Typography>
+            <Typography variant="h5" sx={{mb: 2, fontWeight: '500'}}>{dailyForecast.length}-Day {t('forecastTitle')}</Typography>
             <Grid container spacing={2}>
                 {dailyForecast.map((day, index) => {
                     const isToday = isSameDay(day.date, new Date());
                     return (
                         <Grid item xs={12} sm key={day.date.toISOString()} flexGrow={1}>
                              <Paper sx={{ p: 2, textAlign: 'center', height: '100%', borderRadius: '16px', border: isToday ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}` }}>
-                                 <Typography variant="h6" fontWeight="500">{isToday ? 'Today' : format(day.date, 'EEE')}</Typography>
+                                 <Typography variant="h6" fontWeight="500">{isToday ? t('today', 'Today') : format(day.date, 'EEE')}</Typography>
                                  {getSmallWeatherIcon(day.icon)}
                                  <Typography variant="body1" sx={{fontWeight: 'bold'}}>
                                     <Box component="span" color="error.main">{day.temp_max}°</Box> / <Box component="span" color="info.main">{day.temp_min}°</Box>

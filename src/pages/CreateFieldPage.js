@@ -8,8 +8,10 @@ import { useApp } from '../App';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const CreateFieldPage = () => {
+    const { t } = useTranslation();
     const { user } = useApp();
     const navigate = useNavigate();
     const [fieldName, setFieldName] = useState('');
@@ -32,9 +34,9 @@ const CreateFieldPage = () => {
                 acreage: Number(acreage),
                 sowingDate,
                 createdAt: serverTimestamp(),
-                totalExpense: 0, // <-- Initialize total expense
+                totalExpense: 0,
             });
-            navigate('/app/my-fields'); // Go to the fields list after creation
+            navigate('/app/my-fields');
         } catch (error) {
             console.error("Error creating field: ", error);
             alert("Failed to create field.");
@@ -44,17 +46,49 @@ const CreateFieldPage = () => {
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Container component="main" maxWidth="sm" sx={{ mt: 8 }}>
-                <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Typography component="h1" variant="h5">
-                        Create Field
+                <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: '16px' }}>
+                    <Typography component="h1" variant="h5" sx={{ fontWeight: 'bold' }}>
+                        {t('createField')}
                     </Typography>
                     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
-                        <TextField margin="normal" required fullWidth label="Field Name (e.g., North Field)" value={fieldName} onChange={(e) => setFieldName(e.target.value)} />
-                        <TextField margin="normal" required fullWidth label="Crop Type (e.g., Wheat)" value={cropType} onChange={(e) => setCropType(e.target.value)} />
-                        <TextField margin="normal" required fullWidth label="Acreage" type="number" value={acreage} onChange={(e) => setAcreage(e.target.value)} />
-                        <DatePicker label="Sowing Date" value={sowingDate} onChange={(newValue) => setSowingDate(newValue)} sx={{ width: '100%', mt: 2 }} />
-                        <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-                            Save Field
+                        <TextField 
+                            margin="normal" 
+                            required 
+                            fullWidth 
+                            label={t('fieldName')} 
+                            value={fieldName} 
+                            onChange={(e) => setFieldName(e.target.value)} 
+                        />
+                        <TextField 
+                            margin="normal" 
+                            required 
+                            fullWidth 
+                            label={t('cropType')} 
+                            value={cropType} 
+                            onChange={(e) => setCropType(e.target.value)} 
+                        />
+                        <TextField 
+                            margin="normal" 
+                            required 
+                            fullWidth 
+                            label={t('acreageLabel')} 
+                            type="number" 
+                            value={acreage} 
+                            onChange={(e) => setAcreage(e.target.value)} 
+                        />
+                        <DatePicker 
+                            label={t('sowingDateLabel')} 
+                            value={sowingDate} 
+                            onChange={(newValue) => setSowingDate(newValue)} 
+                            sx={{ width: '100%', mt: 2 }} 
+                        />
+                        <Button 
+                            type="submit" 
+                            fullWidth 
+                            variant="contained" 
+                            sx={{ mt: 3, mb: 2 }}
+                        >
+                            {t('saveField')}
                         </Button>
                     </Box>
                 </Paper>
