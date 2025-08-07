@@ -1,6 +1,6 @@
 // src/App.js
-import React, { useState, useEffect, useContext, createContext, useMemo } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React,{ useState, useEffect, useContext, createContext, useMemo } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme, Typography } from '@mui/material';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
@@ -20,10 +20,47 @@ import ProfilePage from './pages/ProfilePage';
 const AppContext = createContext();
 export const useApp = () => useContext(AppContext);
 
+// We create a new component for the routes to get access to the `useNavigate` hook
+function AppRoutes() {
+  const { user } = useApp();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/app'); // If user is logged in, go to the main app
+    } else {
+      navigate('/auth'); // If user is not logged in, go to the login/signup page
+    }
+  };
+
+  return (
+    <Routes>
+      {/* The Welcome Page is now the strict entry point for everyone */}
+      <Route path="/" element={<WelcomePage onGetStarted={handleGetStarted} />} />
+      
+      {/* Auth page redirects if the user is already logged in */}
+      <Route path="/auth" element={user ? <Navigate to="/app" /> : <AuthPage />} />
+      
+      {/* Protected Application Routes */}
+      <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route index element={<Navigate to="my-fields" replace />} />
+        <Route path="my-fields" element={<FieldListPage />} />
+        <Route path="my-fields/:fieldId" element={<FieldDetailPage />} />
+        <Route path="create-field" element={<CreateFieldPage />} />
+        <Route path="weather" element={<WeatherPage />} />
+        <Route path="recommend" element={<CropRecommenderPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
+
+      {/* Fallback route now always redirects to the Welcome Page */}
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showAuthPage, setShowAuthPage] = useState(false);
   const [mode, setMode] = useState('light');
 
   const colorMode = useMemo(
@@ -74,17 +111,11 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- NEW: Effect to reset theme on logout ---
   useEffect(() => {
     if (!user) {
-      // If user is null (logged out), reset the theme to light mode
       setMode('light');
     }
-  }, [user]); // This effect runs whenever the user state changes
-
-  const handleGetStarted = () => {
-    setShowAuthPage(true);
-  };
+  }, [user]);
 
   if (loading) {
     return <Typography sx={{ textAlign: 'center', mt: '20%' }} variant="h5">Loading KrishiMitra...</Typography>;
@@ -94,20 +125,7 @@ function App() {
     <AppContext.Provider value={{ user, colorMode }}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Routes>
-          <Route path="/" element={!user ? (showAuthPage ? <Navigate to="/auth" /> : <WelcomePage onGetStarted={handleGetStarted} />) : <Navigate to="/app" />} />
-          <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/app" />} />
-          <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-            <Route index element={<Navigate to="my-fields" replace />} />
-            <Route path="my-fields" element={<FieldListPage />} />
-            <Route path="my-fields/:fieldId" element={<FieldDetailPage />} />
-            <Route path="create-field" element={<CreateFieldPage />} />
-            <Route path="weather" element={<WeatherPage />} />
-            <Route path="recommend" element={<CropRecommenderPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Route>
-          <Route path="*" element={<Navigate to={user ? "/app" : "/"} />} />
-        </Routes>
+        <AppRoutes />
       </ThemeProvider>
     </AppContext.Provider>
   );

@@ -35,7 +35,7 @@ const whyPoints = [
   "Offline-first capabilities (coming soon)",
   "Built with scalable & secure cloud backend (Firebase)",
   "Helps reduce waste and maximize output",
-  "Supports local languages (planned)"
+  "Supports local languages"
 ];
 
 const carouselImages = [
